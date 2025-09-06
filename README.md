@@ -32,3 +32,42 @@ Note: Exact scripts depend on the chosen build tool or framework (e.g., Next.js,
 
 ### Ownership and Change Management
 - **Source of truth**: This README is the executive summary of the frontend stack. Architectural or process changes impacting React/Tailwind usage should be reflected here alongside implementation docs.
+
+### Floating Gear Button (Settings)
+The floating gear button is a persistent entry point to application settings. It remains visible above page content and provides quick access without occupying primary navigation space.
+
+- **Purpose**: Single-tap/shortcut access to user and application settings.
+- **Placement**: Fixed to the bottom-right of the viewport, above other content.
+- **Layering**: High `z-index` to ensure visibility above cards/modals.
+
+#### Placement & Layout (Tailwind)
+- Positioning: `fixed bottom-4 right-4 z-50`
+- Shape & size: `h-12 w-12 rounded-full`
+- Centering: `inline-flex items-center justify-center`
+- Elevation: `shadow-lg`
+- Colors: `bg-primary-600 hover:bg-primary-700 text-white dark:bg-primary-500 dark:hover:bg-primary-600`
+- Focus styles: `focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary-500`
+
+#### Interaction Behavior
+- Click/tap toggles the Settings panel (drawer or modal), anchored logically to the button.
+- Keyboard: Activate with Enter/Space. Close panel with Escape. Maintain focus return to the button after close.
+- Optional tooltip on hover/focus: "Settings".
+- Debounce rapid toggles to avoid flicker; ensure only one settings surface is active at a time.
+
+#### Accessibility
+- Use a native `button` element with `type="button"` and `aria-label="Open settings"`.
+- Icon is decorative: include `aria-hidden="true"` on the SVG.
+- Minimum target size of 44×44 px for touch ergonomics.
+- Provide visible focus ring and preserve sufficient color contrast.
+- When the settings panel is open: trap focus inside, hide background from screen readers (e.g., `aria-modal`, `role="dialog"`), and restore focus on close.
+
+#### Integration Guidance
+- Place the button at the app root (e.g., in `App` or root layout) so it persists across routes.
+- Render the settings panel in a portal to the document body to avoid stacking/context issues.
+- Manage open/close state centrally (e.g., a lightweight `SettingsProvider`) to allow other components to open/close the panel.
+- Instrument analytics (e.g., `data-analytics="settings_open"`) for usage and UX insights.
+- Lazy-load settings panel content to minimize initial bundle size.
+
+#### Testing
+- Unit: toggles open/close state, `aria` attributes present, focus returns to button on close.
+- E2E: button is visible, fixed position at bottom-right, settings panel opens and closes via click and keyboard, Escape behaves correctly.
