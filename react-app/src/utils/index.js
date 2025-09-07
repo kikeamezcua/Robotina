@@ -1,0 +1,5 @@
+export const noop = () => {}
+
+export function classNames(...classes) {
+  return classes.filter(Boolean).join(' ')
+}
