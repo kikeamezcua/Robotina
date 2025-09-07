@@ -198,6 +198,111 @@ Note: The exact runtime and commands may differ based on implementation language
 
 ---
 
+## Commands (quick reference)
+
+### Frontend (React app)
+
+```bash
+cd react-app
+
+# Install dependencies
+npm install
+
+# Start dev server (Vite)
+npm run dev
+
+# Build production assets
+npm run build
+
+# Preview the production build locally
+npm run preview
+
+# Lint the codebase
+npm run lint
+```
+
+Optional Vite env (create `.env.local` inside `react-app/`):
+
+```bash
+echo 'VITE_API_BASE_URL=http://localhost:5678/webhook/robotina-webhook' >> react-app/.env.local
+```
+
+### Backend (Docker)
+
+```bash
+# From repository root
+docker build -t robotina:latest .
+docker run --rm \
+  -v "$HOME/.oci:/root/.oci:ro" \
+  -v "$(pwd)/config:/app/config:ro" \
+  -v "$(pwd)/wallets:/app/wallets:ro" \
+  -e ROBOTINA_CONFIG=/app/config/robotina.yaml \
+  -e ROBOTINA_DB_PASSWORD \
+  -e ROBOTINA_ATP_ADMIN_PASSWORD \
+  robotina:latest
+```
+
+### Backend (local runtime example)
+
+```bash
+# Python virtualenv example
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -U pip
+pip install -r requirements.txt
+
+# Required env
+export ROBOTINA_CONFIG="$(pwd)/config/robotina.yaml"
+export ROBOTINA_DB_PASSWORD='strong-db-password'
+export ROBOTINA_ATP_ADMIN_PASSWORD='strong-atp-password'
+
+# Explore CLI
+robotina --help
+```
+
+### Robotina CLI (common examples)
+
+```bash
+# Discover tenancies and compartments
+robotina inventory tenancies --all
+robotina inventory compartments --tenancies prod,dev --regions us-ashburn-1,eu-frankfurt-1
+
+# Databases: list + query
+robotina db list --tenancies prod,dev --all-regions
+robotina db query \
+  --engine atps \
+  --sql 'select sysdate from dual' \
+  --tenancies prod \
+  --regions eu-frankfurt-1,us-ashburn-1
+
+# Compute: list + SSH command
+robotina compute list --tenancies prod --regions us-ashburn-1 --compartments "*"
+robotina compute ssh \
+  --cmd 'uname -a' \
+  --tenancies prod,dev \
+  --regions us-ashburn-1,us-phoenix-1 \
+  --selector 'env=prod'
+```
+
+### Webhook (n8n) request example
+
+```bash
+curl -sS -X POST http://localhost:5678/webhook/robotina-webhook \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "tenancy": "oacnativeproduction",
+    "region": "us-ashburn-1",
+    "realm": "oc1",
+    "target_type": "databases",
+    "identifier": "*",
+    "action": "list",
+    "params": {},
+    "cache_refresh": false
+  }'
+```
+
+---
+
 ## Backend architecture and automation (n8n + webhook + cache)
 
 ### Overview
