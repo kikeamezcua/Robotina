@@ -198,6 +198,76 @@ Note: The exact runtime and commands may differ based on implementation language
 
 ---
 
+## Backend architecture and automation (n8n + webhook + cache)
+
+### Overview
+
+- **n8n workflow**: Orchestrates Robotina backend actions via an HTTP webhook.
+- **Webhook**: `POST http://localhost:5678/webhook/robotina-webhook`
+- **Data sources**: OCI CLI (authoritative), Redis (cache of recent OCI CLI responses)
+- **Local MCP server**: Exposed by n8n to allow local LLMs with MCP support to interact with OCI operations through Robotina tools.
+
+### Backend stack
+
+- **Automation**: n8n (self-hosted)
+- **Cloud control plane**: Oracle Cloud Infrastructure via OCI CLI
+- **Cache**: Redis (ephemeral responses from OCI CLI)
+- **LLM integration**: Local MCP server (exposed by n8n) for MCP-capable local LLMs
+- **API surface**: n8n webhook (HTTP POST)
+
+### Webhook contract
+
+Expected JSON payload:
+
+```json
+{
+  "tenancy": "oacnativeproduction",
+  "region": "us-ashburn-1",
+  "realm": "oc1",
+  "target_type": "tenancies | databases | compute | health",
+  "identifier": "display-name | ocid | pattern",
+  "action": "list | ssh | sql",
+  "params": {},
+  "cache_refresh": false
+}
+```
+
+Notes:
+- **target_type**: Selects the resource domain for the action.
+- **identifier**: Matches the target(s) by display name, OCID, or pattern.
+- **action**: The operation to perform (e.g., inventory list, remote SSH, or SQL query).
+- **params**: Action-specific options (e.g., SQL text, SSH command, filters).
+
+### Caching behavior
+
+- **cache_refresh = true**: n8n calls the OCI CLI to fetch fresh data, updates Redis, and returns the fresh result.
+- **cache_refresh = false**: n8n attempts to read from Redis first. On cache miss, it falls back to OCI CLI, populates Redis, and returns the result.
+- **Redis usage**: n8n uses Redis as a temporary cache for OCI CLI responses.
+
+### Example request
+
+```bash
+curl -sS -X POST http://localhost:5678/webhook/robotina-webhook \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "tenancy": "oacnativeproduction",
+    "region": "us-ashburn-1",
+    "realm": "oc1",
+    "target_type": "databases",
+    "identifier": "*",
+    "action": "list",
+    "params": {},
+    "cache_refresh": false
+  }'
+```
+
+### Frontend integration (React)
+
+- The frontend is a React app that interacts with the n8n webhook above.
+- The React client maintains a secondary cache in `localStorage` to speed up repeated interactions.
+- Suggested keying: hash of the request payload (plus an optional TTL) to balance freshness versus responsiveness.
+- The detailed frontend technology stack is still in progress and will be documented as it solidifies.
+
 ## Typical workflows
 
 Commands shown below are illustrative. Names and flags may vary depending on the CLI implementation.
