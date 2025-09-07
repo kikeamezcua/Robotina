@@ -266,7 +266,21 @@ curl -sS -X POST http://localhost:5678/webhook/robotina-webhook \
 - The frontend is a React app that interacts with the n8n webhook above.
 - The React client maintains a secondary cache in `localStorage` to speed up repeated interactions.
 - Suggested keying: hash of the request payload (plus an optional TTL) to balance freshness versus responsiveness.
-- The detailed frontend technology stack is still in progress and will be documented as it solidifies.
+- See "Frontend tech stack (Robotina 2.0)" below for details.
+
+### Frontend tech stack (Robotina 2.0)
+
+- Framework: React + TypeScript + Vite
+- UI: TailwindCSS + shadcn/ui (Radix under the hood)
+- Charts: Recharts
+- Routing: React Router
+- State: Zustand (lightweight global)
+- Server state / caching: TanStack Query
+- Forms & validation: react-hook-form + zod
+- HTTP: native fetch with a tiny wrapper (typed)
+- Env: import.meta.env (Vite) with VITE_-prefixed vars
+- Testing: Vitest + Testing Library
+- Lint/Format: ESLint + Prettier
 
 ## Typical workflows
 
