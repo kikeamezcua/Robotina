@@ -282,6 +282,221 @@ curl -sS -X POST http://localhost:5678/webhook/robotina-webhook \
 - Testing: Vitest + Testing Library
 - Lint/Format: ESLint + Prettier
 
+#### Details and usage
+
+##### Framework: React + TypeScript + Vite
+
+- Description: Modern React app scaffolded with Vite for fast dev server and optimized builds, with TypeScript for strong types.
+- Why useful here: Enables a responsive, type-safe UI for cross-tenancy operations with quick iteration speed.
+- How to use (in `react-app/`):
+  - Dev: `npm run dev`
+  - Build: `npm run build`; Preview: `npm run preview`
+- Example (typed component):
+
+```tsx
+// react-app/src/components/Hello.tsx
+import React from 'react';
+
+type HelloProps = { name: string };
+export function Hello({ name }: HelloProps) {
+  return <div>Hello, {name}</div>;
+}
+```
+
+##### UI: TailwindCSS + shadcn/ui (Radix under the hood)
+
+- Description: Utility-first CSS (Tailwind) plus accessible headless primitives (Radix) wrapped as ready-to-use components (shadcn/ui).
+- Why useful here: Consistent, accessible UI for complex forms, tables, dialogs, and command palettes without heavy custom CSS.
+- How to use:
+  - Tailwind classes in JSX; import shadcn/ui components as needed.
+- Example:
+
+```tsx
+// react-app/src/components/Toolbar.tsx
+import { Button } from "@/components/ui/button";
+
+export function Toolbar() {
+  return (
+    <div className="flex items-center gap-2 p-2 border-b">
+      <Button>Run</Button>
+      <Button variant="secondary">Refresh</Button>
+    </div>
+  );
+}
+```
+
+##### Charts: Recharts
+
+- Description: Composable charting library for React based on D3 under the hood.
+- Why useful here: Visualizes inventory counts, regional health, query timings.
+- Example:
+
+```tsx
+// react-app/src/components/DbLatencyChart.tsx
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
+
+export function DbLatencyChart({ data }: { data: Array<{ ts: string; ms: number }> }) {
+  return (
+    <ResponsiveContainer width="100%" height={240}>
+      <LineChart data={data}>
+        <XAxis dataKey="ts" />
+        <YAxis />
+        <Tooltip />
+        <Line type="monotone" dataKey="ms" stroke="#0ea5e9" />
+      </LineChart>
+    </ResponsiveContainer>
+  );
+}
+```
+
+##### Routing: React Router
+
+- Description: Client-side routing for React.
+- Why useful here: Separates views like Tenancies, Databases, Compute, and Health.
+- Example:
+
+```tsx
+// react-app/src/main.tsx (excerpt)
+import { createBrowserRouter, RouterProvider } from "react-router-dom";
+import App from "./App";
+import Databases from "./routes/Databases";
+
+const router = createBrowserRouter([
+  { path: "/", element: <App /> },
+  { path: "/databases", element: <Databases /> },
+]);
+
+// <RouterProvider router={router} /> in the root
+```
+
+##### State: Zustand (lightweight global)
+
+- Description: Minimal global state without boilerplate.
+- Why useful here: Share small app state (selected tenancy/region, UI filters) without Redux overhead.
+- Example:
+
+```ts
+// react-app/src/state/useSelectionStore.ts
+import { create } from "zustand";
+
+type SelectionState = {
+  tenancy: string | null;
+  setTenancy: (t: string | null) => void;
+};
+
+export const useSelectionStore = create<SelectionState>((set) => ({
+  tenancy: null,
+  setTenancy: (t) => set({ tenancy: t }),
+}));
+```
+
+##### Server state / caching: TanStack Query
+
+- Description: Data fetching, caching, revalidation, and request deduping.
+- Why useful here: Keeps webhook-driven data fresh and consistent across views with retries and cache.
+- Example:
+
+```tsx
+// react-app/src/app/query.tsx
+import { QueryClient, QueryClientProvider, useQuery } from "@tanstack/react-query";
+
+const client = new QueryClient();
+export function QueryRoot({ children }: { children: React.ReactNode }) {
+  return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
+}
+
+export function useTenancies() {
+  return useQuery({
+    queryKey: ["tenancies"],
+    queryFn: async () => {
+      const res = await fetch("/api/tenancies");
+      return res.json();
+    },
+  });
+}
+```
+
+##### Forms & validation: react-hook-form + zod
+
+- Description: Performant form state with schema validation.
+- Why useful here: Safe command inputs (SQL text, SSH options) with instant feedback.
+- Example:
+
+```tsx
+// react-app/src/components/SqlForm.tsx
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+
+const schema = z.object({ sql: z.string().min(1), tenancy: z.string().min(1) });
+type FormData = z.infer<typeof schema>;
+
+export function SqlForm({ onSubmit }: { onSubmit: (v: FormData) => void }) {
+  const { register, handleSubmit, formState: { errors } } = useForm<FormData>({ resolver: zodResolver(schema) });
+  return (
+    <form onSubmit={handleSubmit(onSubmit)}>
+      <input {...register("sql")} placeholder="select sysdate from dual" />
+      {errors.sql && <span>Required</span>}
+      <button type="submit">Run</button>
+    </form>
+  );
+}
+```
+
+##### HTTP: native fetch with a tiny wrapper (typed)
+
+- Description: Use Web Fetch with a small typed helper for JSON requests.
+- Why useful here: Minimal dependency surface; typed responses.
+- Example:
+
+```ts
+// react-app/src/utils/http.ts
+export async function httpJson<T>(input: RequestInfo, init?: RequestInit): Promise<T> {
+  const res = await fetch(input, { ...init, headers: { "Content-Type": "application/json", ...(init?.headers || {}) } });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json() as Promise<T>;
+}
+
+// Usage
+// const data = await httpJson<MyType>(`/api/databases`, { method: "POST", body: JSON.stringify(payload) });
+```
+
+##### Env: import.meta.env (Vite) with VITE_-prefixed vars
+
+- Description: Build-time injected env vars.
+- Why useful here: Configure webhook base URL, feature flags per environment.
+- Example:
+
+```ts
+// react-app/src/config.ts
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "/api";
+```
+
+##### Testing: Vitest + Testing Library
+
+- Description: Unit/component tests with a Jest-like runner and DOM utilities.
+- Why useful here: Validates UI logic for risky operations (SQL/SSH) without hitting real backends.
+- Example:
+
+```tsx
+// react-app/src/components/__tests__/Hello.test.tsx
+import { render, screen } from "@testing-library/react";
+import { Hello } from "../Hello";
+
+it("renders name", () => {
+  render(<Hello name="Robotina" />);
+  expect(screen.getByText(/Robotina/)).toBeInTheDocument();
+});
+```
+
+##### Lint/Format: ESLint + Prettier
+
+- Description: Linting and formatting for consistent, error-free code.
+- Why useful here: Keeps a fast-moving UI codebase readable and safe.
+- How to use (in `react-app/`):
+  - Lint: `npm run lint`
+  - Format: `npm run format`
+
 ## Typical workflows
 
 Commands shown below are illustrative. Names and flags may vary depending on the CLI implementation.
